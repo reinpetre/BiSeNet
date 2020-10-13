@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 from lib.models import model_factory
 from configs import cfg_factory
-from lib.cityscapes_cv2 import get_data_loader
+from lib.railsem_cv2 import get_data_loader
 from tools.evaluate import eval_model
 from lib.ohem_ce_loss import OhemCELoss
 from lib.lr_scheduler import WarmupPolyLrScheduler
@@ -190,9 +190,9 @@ def train():
         if (it + 1) % 100 == 0:
             lr = lr_schdr.get_lr()
             lr = sum(lr) / len(lr)
-            print_log_msg(
-                it, cfg.max_iter, lr, time_meter, loss_meter,
-                loss_pre_meter, loss_aux_meters)
+            print_log_msg(it, cfg.max_iter, lr, time_meter, loss_meter, loss_pre_meter, loss_aux_meters)
+            # Safe checkpoint
+            save_checkpoint(net.module)
 
     ## dump the final model and evaluate the result
     save_pth = osp.join(cfg.respth, 'model_final.pth')
@@ -206,6 +206,19 @@ def train():
     logger.info(tabulate([mious, ], headers=heads, tablefmt='orgtbl'))
 
     return
+
+def save_checkpoint(model, is_best=False):
+    """Save Checkpoint"""
+    directory = os.path.expanduser("weights")
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    filename = '{}_{}.pth'.format("bisenetv2", "railsem")
+    save_path = os.path.join(directory, filename)
+    torch.save(model.state_dict(), save_path)
+    if is_best:
+        best_filename = '{}_{}_best_model.pth'.format("bisenetv2", "railsem")
+        best_filename = os.path.join(directory, best_filename)
+        shutil.copyfile(filename, best_filename)
 
 
 def main():
